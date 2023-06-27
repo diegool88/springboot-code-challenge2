@@ -165,6 +165,37 @@ class SpringbootCodeChallenge2ApplicationTests {
     @DirtiesContext
     void shouldUpdateAnExistingNote() {
     	// TODO: Complete the unit test based on the test method description
+    	Note existingNote = new Note(101L, "Test Note 1.2", "This is test note 1.2", null, null, "user1");
+    	HttpEntity<Note> request = new HttpEntity<>(existingNote);
+        ResponseEntity<Void> createResponse = restTemplate
+                .withBasicAuth("user1", "user1$$pwd")
+                .exchange("/notes/101", HttpMethod.PUT, request, Void.class);
+        assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        ResponseEntity<String> getResponse = restTemplate
+                .withBasicAuth("user1", "user1$$pwd")
+                .getForEntity("/notes/101", String.class);
+        assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        DocumentContext documentContext = JsonPath.parse(getResponse.getBody());
+        String title = documentContext.read("$.title");
+        String body = documentContext.read("$.body");
+        String owner = documentContext.read("$.owner");
+
+        assertThat(title).isEqualTo("Test Note 1.2");
+        assertThat(body).isEqualTo("This is test note 1.2");
+        assertThat(owner).isEqualTo("user1");
+        
+        try {
+        	SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        	String testedDateTimeStr="2023-06-26 08:00:00.000";  
+			Date testedDateTime = dateFormat.parse(testedDateTimeStr);
+			OffsetDateTime modifiedOn = OffsetDateTime.parse(documentContext.read("$.modifiedOn"));
+	        assertThat(Date.from(modifiedOn.toInstant())).isAfter(testedDateTime);
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     }
 
 }

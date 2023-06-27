@@ -78,7 +78,18 @@ public class NoteController {
 		 * 3. Using the UriComponentsBuilder return the path of the created note in the response header
 		 * 4. Return a created 201 HTTP response message with the new URI
 		 */
-		return ResponseEntity.internalServerError().build();
+		if(newNoteRequest.getTitle() == null 
+				|| newNoteRequest.getTitle().isBlank() 
+				|| newNoteRequest.getBody() == null 
+				|| newNoteRequest.getBody().isBlank()) {
+			return ResponseEntity.badRequest().build();
+		}
+		Note savedNote = noteRepository.save(new Note(null, newNoteRequest.getTitle(), newNoteRequest.getBody(), new Date(), new Date(), principal.getName()));
+		URI locationOfNewNote = ucb
+                .path("notes/{id}")
+                .buildAndExpand(savedNote.getId())
+                .toUri();
+        return ResponseEntity.created(locationOfNewNote).build();
 	}
 	
 	/**
@@ -98,7 +109,29 @@ public class NoteController {
 		 * 2. If the previous validation is passed then update the note accordingly and return a 204 HTTP response message (no content),
 		 *    otherwise, return the corresponding 404 not found HTTP response message.
 		 */
-		return ResponseEntity.internalServerError().build();
+		Note note = findNote(requestedId, principal);
+        if (note != null) {
+        	boolean changed = false;
+            if(updateNoteRequest.getTitle() != null 
+            		&& !updateNoteRequest.getTitle().isBlank() 
+            		&& !updateNoteRequest.getTitle().equals(note.getTitle())) {
+            	note.setTitle(updateNoteRequest.getTitle());
+            	changed = true;
+            }
+            if(updateNoteRequest.getBody() != null 
+            		&& !updateNoteRequest.getBody().isBlank()
+            		&& !updateNoteRequest.getBody().equals(note.getBody())) {
+            	note.setBody(updateNoteRequest.getBody());
+            	changed = true;
+            }
+            if(changed) {
+            	note.setModifiedOn(new Date());
+            	noteRepository.save(note);
+            }
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
 	}
 	
 	/**
